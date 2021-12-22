@@ -2,9 +2,10 @@
 import numpy as np 
 import cv2 
 import functools
-from os.path import splitext
+from os.path import getctime, splitext
 from keras.models import model_from_json
-
+import glob
+import main
 # %%
 class Label:
     def __init__(self, cl=-1, tl=np.array([0., 0.]), br=np.array([0., 0.]), prob=None):
@@ -262,7 +263,11 @@ def detect_lp(model, Im, max_dim, lp_threshold):
 # %%
 # Name picture 
 img_path = "uploads\\media.jpg"
-
+list_of_files = glob.glob("uploads\\*") # * means all if need specific format then *.csv
+media_path = max(list_of_files, key=getctime)
+print(media_path)
+media_extension = get_extension(media_path)
+# %%
 # Load model LP detection 
 wpod_net_path = "wpod-net_update1.json" 
 wpod_net = load_model(wpod_net_path)

@@ -10,3 +10,4 @@
 *.f4v
 *.swf
 *.webm 
+./__pycache__/*
