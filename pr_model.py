@@ -5,7 +5,7 @@ import functools
 from os.path import getctime, splitext
 from keras.models import model_from_json
 import glob
-from main import ALLOWED_EXTENSIONS, IMAGE_EXTENSIONS
+from app import ALLOWED_EXTENSIONS, IMAGE_EXTENSIONS
 
 #%%
 def get_extension(filename): 
@@ -303,8 +303,8 @@ def recognition(filepath):
 
         pic = cv2.imread(file_path) 
         print ("Uploaded file path = {}".format(file_path))
-        cv2.imshow("Image", pic)
-        cv2.waitKey()
+        # cv2.imshow("Image", pic)
+        # cv2.waitKey()
 
         # Calculate ratio of weight/height and find the smallest
         ratio = float(max(pic.shape[:2])) / min(pic.shape[:2])
@@ -312,9 +312,9 @@ def recognition(filepath):
         bound_dim = min(side, Dmax)
 
         _ , license_plate, lp_type = detect_lp(wpod_net, imnormalize(pic), bound_dim, lp_threshold=0.5)
-        for i in range (len(license_plate)):
-            cv2.imshow("Found plate", cv2.cvtColor(license_plate[i],cv2.COLOR_RGB2BGR ))
-            cv2.waitKey()
+        # for i in range (len(license_plate)):
+        #    cv2.imshow("Found plate", cv2.cvtColor(license_plate[i],cv2.COLOR_RGB2BGR ))
+        #    cv2.waitKey()
 
 
 

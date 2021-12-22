@@ -48,7 +48,7 @@ def upload_file():
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             print ("Filepath in main.py: %s" % filepath)
             file.save(filepath)
-            url = (url_for('download_file', name=filename))
+            url = (url_for('display_result', name=filename))
             recognition_result = model.recognition(filepath)
             return redirect(url)
     return '''
@@ -70,3 +70,12 @@ def download_file(name):
 app.add_url_rule(
     "/uploads/<name>", endpoint="download_file", build_only=True
 )
+
+@app.route('/result/<name>')
+def display_result(name):
+    return "Implementing {}".format(name)
+
+app.add_url_rule(
+    "/result/<name>", endpoint="display_result", build_only=True
+)
+
