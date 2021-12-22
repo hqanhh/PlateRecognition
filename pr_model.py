@@ -5,7 +5,23 @@ import functools
 from os.path import getctime, splitext
 from keras.models import model_from_json
 import glob
-import main
+from main import ALLOWED_EXTENSIONS, IMAGE_EXTENSIONS
+
+#%%
+def get_extension(filename): 
+    if '.' in filename:
+        return filename.rsplit('.', 1)[1].lower()
+    return None
+
+def get_filename_without_extension(filename):
+    if '.' in filename: 
+        return filename.rsplit('.', 1)[0].lower()
+    return filename
+
+def allowed_file(filename): 
+    return get_extension(filename) in ALLOWED_EXTENSIONS
+
+
 # %%
 class Label:
     def __init__(self, cl=-1, tl=np.array([0., 0.]), br=np.array([0., 0.]), prob=None):
@@ -260,39 +276,45 @@ def detect_lp(model, Im, max_dim, lp_threshold):
 
     return L, TLp, lp_type
 
-# %%
-# Name picture 
-img_path = "uploads\\media.jpg"
-list_of_files = glob.glob("uploads\\*") # * means all if need specific format then *.csv
-media_path = max(list_of_files, key=getctime)
-print(media_path)
-media_extension = get_extension(media_path)
-# %%
-# Load model LP detection 
 wpod_net_path = "wpod-net_update1.json" 
 wpod_net = load_model(wpod_net_path)
 
-pic = cv2.imread(img_path)
-#cv2.imshow('Input image', pic)
-#cv2.waitKey(0)
 
-# %%
- 
-# Max and min size of 1 dimenson of image
-Dmax = 608
-Dmin = 288
+#%%
+def recognition(filepath):
+    """Called by webservice. 
 
-# Calculate ratio of weight/height and find the smallest
-ratio = float(max(pic.shape[:2])) / min(pic.shape[:2])
-side = int(ratio * Dmin)
-bound_dim = min(side, Dmax)
+    Args: 
+        media_file (~werkzeug.datastructures.FileStorage): File from frontend form submission
 
-_ , license_plate, lp_type = detect_lp(wpod_net, imnormalize(pic), bound_dim, lp_threshold=0.5)
+    Returns: 
+        Either: 
+        (1, (List, List, Literal[1, 0])) 
+        or: 
+        (2, )
+    """ 
+
+    file_path = filepath
+    extension = get_extension(file_path)    
+
+    if extension in IMAGE_EXTENSIONS:
+        Dmax = 608
+        Dmin = 288
+
+        pic = cv2.imread(file_path) 
+        print ("Uploaded file path = {}".format(file_path))
+        cv2.imshow("Image", pic)
+        cv2.waitKey()
+
+        # Calculate ratio of weight/height and find the smallest
+        ratio = float(max(pic.shape[:2])) / min(pic.shape[:2])
+        side = int(ratio * Dmin)
+        bound_dim = min(side, Dmax)
+
+        _ , license_plate, lp_type = detect_lp(wpod_net, imnormalize(pic), bound_dim, lp_threshold=0.5)
+        for i in range (len(license_plate)):
+            cv2.imshow("Found plate", cv2.cvtColor(license_plate[i],cv2.COLOR_RGB2BGR ))
+            cv2.waitKey()
 
 
-if (len(license_plate)):
-    cv2.imshow("Plate Found",cv2.cvtColor(license_plate[0],cv2.COLOR_RGB2BGR ))
-    cv2.waitKey()
 
-cv2.destroyAllWindows()
-# %%

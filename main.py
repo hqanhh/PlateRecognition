@@ -1,9 +1,11 @@
 import os
 from flask import Flask, flash, request, redirect, url_for
 from werkzeug.utils import secure_filename
-import pr_model
 UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
 ALLOWED_EXTENSIONS = {'jpg', 'png', 'mp4'}
+IMAGE_EXTENSIONS = {'jpg', 'png'}
+filepath = "uploads/media.jpg"
+recognition_result = None 
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -23,6 +25,8 @@ def allowed_file(filename):
     return get_extension(filename) in ALLOWED_EXTENSIONS
 
 
+import pr_model as model 
+
 @app.route('/', methods=['GET', 'POST'])
 def upload_file():
     if request.method == 'POST':
@@ -39,8 +43,14 @@ def upload_file():
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             filename = "media." + get_extension(filename)
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            return redirect(url_for('download_file', name=filename))
+            print ("Filename in main.py: %s" % filename)
+            global filepath 
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            print ("Filepath in main.py: %s" % filepath)
+            file.save(filepath)
+            url = (url_for('download_file', name=filename))
+            recognition_result = model.recognition(filepath)
+            return redirect(url)
     return '''
     <!doctype html>
     <title>Upload new File</title>
