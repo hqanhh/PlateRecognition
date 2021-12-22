@@ -76,6 +76,17 @@ def getWH(image):
 
 #Find intersection over union area
 def IOU(tl1, br1, tl2, br2):
+    """Find intersection over union area
+
+    Args:
+        tl1 (tuple(int, int)): Top-left coordinates of the first rectangle
+        br1 (tuple(int, int)): Bottom-right coordinates of the first rectangle
+        tl2 (tuple(int, int)): Top-left coordinates of the second rectangle
+        br2 (tuple(int, int)): Bottom-right coordinates of the second rectangle
+
+    Returns:
+        float: Area of intersection
+    """
     wh1 = br1-tl1
     wh2 = br2-tl2
     assert((wh1 >= 0).all() and (wh2 >= 0).all())
@@ -262,3 +273,21 @@ pic = cv2.imread(img_path)
 
 # %%
  
+# Max and min size of 1 dimenson of image
+Dmax = 608
+Dmin = 288
+
+# Calculate ratio of weight/height and find the smallest
+ratio = float(max(pic.shape[:2])) / min(pic.shape[:2])
+side = int(ratio * Dmin)
+bound_dim = min(side, Dmax)
+
+_ , license_plate, lp_type = detect_lp(wpod_net, imnormalize(pic), bound_dim, lp_threshold=0.5)
+
+
+if (len(license_plate)):
+    cv2.imshow("Plate Found",cv2.cvtColor(license_plate[0],cv2.COLOR_RGB2BGR ))
+    cv2.waitKey()
+
+cv2.destroyAllWindows()
+# %%
