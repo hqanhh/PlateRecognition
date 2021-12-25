@@ -1,5 +1,5 @@
 import os
-from flask import Flask, flash, request, redirect, url_for
+from flask import Flask, flash, request, redirect, url_for, render_template
 from werkzeug.utils import secure_filename
 from enum import Enum, unique
 UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
@@ -63,6 +63,7 @@ def upload_file():
             print ("Filepath in main.py: %s" % filepath)
             file.save(filepath)
             url = (url_for('display_result', name=filename))
+            global recognition_result
             recognition_result = pr_model.recognition(filepath)
             return redirect(url)
     return '''
@@ -87,7 +88,7 @@ app.add_url_rule(
 
 @app.route('/result/<name>')
 def display_result(name):
-    return "Implementing {}".format(name)
+    return render_template("result_display.html", results=recognition_result, name=name)
 
 app.add_url_rule(
     "/result/<name>", endpoint="display_result", build_only=True

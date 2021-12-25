@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+  
+<html>
+<head>
+    <title>Recognition result</title>
+</head>
+  
+<!-- Adding some style to table (OPTIONAL) -->
+<style type="text/css">
+      
+    th:tr{
+        color: blue;
+  
+    }
+    tr:nth-of-type(2n){
+        border: 1px solid black;
+        background-color: rgba(150, 150, 150, 0.315);
+  
+    }
+  
+    td{
+        padding: 8px 8px;
+        border: 1px solid black;
+    }
+</style>
+  
+<body>
+
+<img src = "../uploads/{{name}}" alt = "Original image">
+  
+<table style="margin-left: 20px;">
+<!-- Table headers -->
+    <th>
+        <tr style="color: rgb(212, 0, 255); ">    
+        <td>Plate Image</td>
+        <td>Plate Number</td> 
+        <td>Start time</td>
+        <td>End time</td>
+</tr>
+    </th>
+      
+<!-- For loop logic of jinja template -->
+{%for result in results%}
+  
+<!-- table rows -->
+<tr>
+    <td><img src = "../{{result[0]}}" alt = "Plate image"></td>
+    <td>{{result[1]}}</td> 
+    <td>{{result[2]}}</td> 
+    <td>{{result[3]}}</td> 
+
+{%endfor%}
+  
+</tr>
+  
+</table>
+  
+  
+</body>
+</html>

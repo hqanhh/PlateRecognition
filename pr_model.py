@@ -3,7 +3,7 @@ import numpy as np
 import cv2 
 import functools
 import matplotlib.pyplot as plt
-from os.path import getctime, splitext 
+from os.path import getctime, splitext, join
 import tensorflow
 import tensorflow.keras
 from tensorflow.keras.models import model_from_json
@@ -11,7 +11,7 @@ import glob
 import torch
 import torch.nn as nn
 import torchvision.transforms as transforms
-from app import ALLOWED_EXTENSIONS, IMAGE_EXTENSIONS, _MEDIA_TYPE, recognition_result
+from app import ALLOWED_EXTENSIONS, IMAGE_EXTENSIONS, _MEDIA_TYPE
 chars = ['0','1','A','B','C','D','E','F','G','H','K','L','2','M','N','P','R','S','T','U','V','X','Y','3','Z','4','5','6','7','8','9']
 
 #%%
@@ -413,11 +413,11 @@ def solve_image(pic):
         #cv2.imshow("Plate: {}".format(plate_number), plate)
         result.append((plate, plate_number))
 
-    for im, pl in result:
-        cv2.imshow("Plate: {}".format(pl), im)
-        cv2.waitKey()
     return result
 
+
+def int_to_string_filename(int_value, extension=".jpg"):
+    return join("uploads", "{:06d}".format(int_value) + extension)
 
 #%%
 def recognition(filepath):
@@ -427,10 +427,7 @@ def recognition(filepath):
         media_file (~werkzeug.datastructures.FileStorage): File from frontend form submission
 
     Returns: 
-        Either: 
-        (_MEDIA_TYPE.IMAGE, (List[cv.Mat, str])) 
-        or: 
-        (_MEDIA_TYPE.VIDEO, (List[cv.Mat, str, str, str]))
+        (List[(str, str, str, str)])): image path, plate number, start time, end time
     """ 
 
     file_path = filepath
@@ -439,10 +436,20 @@ def recognition(filepath):
     if extension in IMAGE_EXTENSIONS:
 
         pic = cv2.imread(file_path) 
-        global recognition_result
-        recognition_result = (_MEDIA_TYPE.IMAGE, solve_image(pic))
+        recognition_result = solve_image(pic)
+        for i, x in enumerate(recognition_result):
+            cv2.imwrite(int_to_string_filename(i), x[0]) 
+        recognition_result = [(int_to_string_filename(i), x[1], "", "") for (i, x) in enumerate(recognition_result)]
 
-        # Calculate ratio of weight/height and find the smallest
-        
-
-
+    else:
+        count = 0
+        cap = cv2.VideoCapture(filepath)
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        while True:
+            is_read, frame = cap.read()
+            if not is_read:
+                # break out of the loop if there are no frames to read
+                break
+            count += 1
+            frame_result = solve_image(frame) 
+    return recognition_result
