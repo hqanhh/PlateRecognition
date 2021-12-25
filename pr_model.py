@@ -279,11 +279,13 @@ def detect_lp(model, Im, max_dim, lp_threshold):
 wpod_net_path = "wpod-net_update1.json" 
 wpod_net = load_model(wpod_net_path)
 
-def get_bounding_boxes(img, value = 255):
+def get_bounding_boxes(img, value = 255, lower_bound = 1/80, upper_bound = 1/10):
     size = img.shape 
     visited = np.zeros(size, dtype=np.bool_) 
     i = 0 
     boxes = []
+    lower = int(size[0] * size[1] * lower_bound) 
+    upper = int(size[0] * size[1] * upper_bound)
     while i < size[0]: 
         j = 0
         while j < size[1]:
@@ -311,7 +313,9 @@ def get_bounding_boxes(img, value = 255):
                                 visited[nexti][nextj] = True
                                 qi.append(nexti) 
                                 qj.append(nextj)
-                boxes.append(((ilow, jlow),(ihigh, jhigh)))
+                area = ((ihigh - ilow + 1) * (jhigh - jlow + 1))
+                if lower <= area <= upper:
+                    boxes.append(((ilow, jlow),(ihigh, jhigh)))
             j += 1
         i += 1
     return boxes
