@@ -1,11 +1,25 @@
 import os
 from flask import Flask, flash, request, redirect, url_for
 from werkzeug.utils import secure_filename
+from enum import Enum, unique
 UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
 ALLOWED_EXTENSIONS = {'jpg', 'png', 'mp4'}
 IMAGE_EXTENSIONS = {'jpg', 'png'}
-filepath = "uploads/media.jpg"
+filepath = ""
 recognition_result = None 
+class _MEDIA_TYPE(Enum): 
+    NONE = 0
+    IMAGE = 1
+    VIDEO = 2
+
+def get_media_type(file_extension):
+    if file_extension in IMAGE_EXTENSIONS:
+        return _MEDIA_TYPE.IMAGE
+    elif file_extension in ALLOWED_EXTENSIONS:
+        return _MEDIA_TYPE.VIDEO
+    return _MEDIA_TYPE.NONE
+
+uploaded_mediatype = _MEDIA_TYPE.NONE
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER

@@ -5,7 +5,7 @@ import functools
 from os.path import getctime, splitext
 from keras.models import model_from_json
 import glob
-from app import ALLOWED_EXTENSIONS, IMAGE_EXTENSIONS
+from app import ALLOWED_EXTENSIONS, IMAGE_EXTENSIONS, _MEDIA_TYPE, recognition_result
 
 #%%
 def get_extension(filename): 
@@ -279,6 +279,71 @@ def detect_lp(model, Im, max_dim, lp_threshold):
 wpod_net_path = "wpod-net_update1.json" 
 wpod_net = load_model(wpod_net_path)
 
+def get_bounding_boxes(img, value = 255):
+    size = img.shape 
+    visited = np.zeros(size, dtype=np.bool_) 
+    i = 0 
+    boxes = []
+    while i < size[0]: 
+        j = 0
+        while j < size[1]:
+            # print (i, j, img[i, j])
+            if img[i][j] == value and not visited[i][j]: 
+                qi = [i] 
+                qj = [j]
+                visited[i][j] = True
+                ihigh = i
+                ilow = i
+                jhigh = j
+                jlow = j
+                while len(qi) > 0: 
+                    fronti = qi.pop()
+                    frontj = qj.pop()
+                    ihigh = max(ihigh, fronti)
+                    ilow = min(ilow, fronti)
+                    jhigh = max(jhigh, frontj)
+                    jlow = min(jlow, frontj)
+                    for dx, dy in [(-1, 0), (1, 0), (0, 1), (0, -1)]: 
+                        nexti = fronti + dx
+                        nextj = frontj + dy
+                        if 0 <= nexti < size[0] and 0 <= nextj < size[1]:
+                            if not visited[nexti][nextj]:
+                                visited[nexti][nextj] = True
+                                qi.append(nexti) 
+                                qj.append(nextj)
+                boxes.append(((ilow, jlow),(ihigh, jhigh)))
+            j += 1
+        i += 1
+    return boxes
+
+def solve_image(pic):
+    """From loaded cv2 image, solve for the license plate(s)
+
+    Args:
+        pic (cv2 loaded): image
+
+    Returns:
+        List[(cv2image, str)]: List of tuple(plate image, plate number)
+    """
+    Dmax = 608
+    Dmin = 288
+    ratio = float(max(pic.shape[:2])) / min(pic.shape[:2])
+    side = int(ratio * Dmin)
+    bound_dim = min(side, Dmax)
+
+    _ , license_plates, lp_type = detect_lp(wpod_net, imnormalize(pic), bound_dim, lp_threshold=0.5)
+    for _plate in license_plates: 
+        plate = cv2.convertScaleAbs(_plate, alpha = 255.0)
+        #cv2.imshow("Plate", plate)
+        #cv2.waitKey()
+        gray = cv2.cvtColor(plate, cv2.COLOR_BGR2GRAY)
+        binary = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY_INV)[1]
+        cv2.imshow("Binary", binary)
+        cv2.waitKey()
+        boxes = get_bounding_boxes(binary)
+        print(boxes)
+    pass
+
 
 #%%
 def recognition(filepath):
@@ -289,32 +354,20 @@ def recognition(filepath):
 
     Returns: 
         Either: 
-        (1, (List, List, Literal[1, 0])) 
+        (_MEDIA_TYPE.IMAGE, (List[str, cv.Mat])) 
         or: 
-        (2, )
+        (_MEDIA_TYPE.VIDEO, (List[str, cv.Mat, str, str]))
     """ 
 
     file_path = filepath
     extension = get_extension(file_path)    
 
     if extension in IMAGE_EXTENSIONS:
-        Dmax = 608
-        Dmin = 288
 
         pic = cv2.imread(file_path) 
-        print ("Uploaded file path = {}".format(file_path))
-        # cv2.imshow("Image", pic)
-        # cv2.waitKey()
+        solve_image(pic)
 
         # Calculate ratio of weight/height and find the smallest
-        ratio = float(max(pic.shape[:2])) / min(pic.shape[:2])
-        side = int(ratio * Dmin)
-        bound_dim = min(side, Dmax)
-
-        _ , license_plate, lp_type = detect_lp(wpod_net, imnormalize(pic), bound_dim, lp_threshold=0.5)
-        # for i in range (len(license_plate)):
-        #    cv2.imshow("Found plate", cv2.cvtColor(license_plate[i],cv2.COLOR_RGB2BGR ))
-        #    cv2.waitKey()
-
+        
 
 
