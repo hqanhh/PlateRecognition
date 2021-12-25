@@ -318,6 +318,7 @@ def get_bounding_boxes(img, value = 255, lower_bound = 1/80, upper_bound = 1/10)
                     boxes.append(((ilow, jlow),(ihigh, jhigh)))
             j += 1
         i += 1
+    boxes = sorted(boxes)
     return boxes
 
 def solve_image(pic):
@@ -342,10 +343,11 @@ def solve_image(pic):
         #cv2.waitKey()
         gray = cv2.cvtColor(plate, cv2.COLOR_BGR2GRAY)
         binary = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY_INV)[1]
-        cv2.imshow("Binary", binary)
-        cv2.waitKey()
+        #cv2.imshow("Binary", binary)
+        #cv2.waitKey()
         boxes = get_bounding_boxes(binary)
         print(boxes)
+        
     pass
 
 
