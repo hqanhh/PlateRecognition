@@ -2,11 +2,45 @@
 import numpy as np 
 import cv2 
 import functools
-from os.path import getctime, splitext
-from keras.models import model_from_json
+import matplotlib.pyplot as plt
+from os.path import getctime, splitext 
+import tensorflow
+import tensorflow.keras
+from tensorflow.keras.models import model_from_json
 import glob
+import torch
+import torch.nn as nn
+import torchvision.transforms as transforms
 from app import ALLOWED_EXTENSIONS, IMAGE_EXTENSIONS, _MEDIA_TYPE, recognition_result
+chars = ['0','1','A','B','C','D','E','F','G','H','K','L','2','M','N','P','R','S','T','U','V','X','Y','3','Z','4','5','6','7','8','9']
 
+#%%
+class MultiLayerCNN(nn.Module):
+    def __init__(self):
+        super(MultiLayerCNN, self).__init__()
+        # Call a convolutional layer with input_channels = 1, output_channels = 10, kernel_size = 5
+        self.conv1 = nn.Conv2d(1, 10, 5)
+        # Max Pooling takes a sliding window (2*2) and replaces the window with the maximum value. 
+        self.pool = nn.MaxPool2d(2, 2)
+        # Call a convolutional layer with input_channels = 10, output_channels = 20, kernel_size = 5
+        self.conv2 = nn.Conv2d(10, 20, 5)
+        # 320 inputs, 31 outputs
+        self.fc = nn.Linear(320,31)
+
+    def forward(self, x):
+        # We use relu activation function in between layers
+        # Layer 1
+        x = self.pool(nn.functional.relu(self.conv1(x)))
+        # Layer 2
+        x = self.pool(nn.functional.relu(self.conv2(x)))
+        # Flatten tensor shape to 320
+        x = x.view(-1, 320)
+        # Calculate softmax which return probabilities for 31 catogories
+        x = nn.functional.log_softmax(self.fc(x),dim=1)
+        return x
+
+cnn_model = MultiLayerCNN()
+cnn_model.load_state_dict(torch.load("model.pth"))
 #%%
 def get_extension(filename): 
     if '.' in filename:
@@ -286,6 +320,7 @@ def get_bounding_boxes(img, value = 255, lower_bound = 1/80, upper_bound = 1/10)
     boxes = []
     lower = int(size[0] * size[1] * lower_bound) 
     upper = int(size[0] * size[1] * upper_bound)
+    print (" low = {}, up = {}, total = {}".format(lower, upper, size[0] * size[1]))
     while i < size[0]: 
         j = 0
         while j < size[1]:
@@ -313,13 +348,33 @@ def get_bounding_boxes(img, value = 255, lower_bound = 1/80, upper_bound = 1/10)
                                 visited[nexti][nextj] = True
                                 qi.append(nexti) 
                                 qj.append(nextj)
-                area = ((ihigh - ilow + 1) * (jhigh - jlow + 1))
-                if lower <= area <= upper:
+                width = jhigh - jlow + 1
+                height = ihigh - ilow + 1
+                area = width * height
+                if lower <= area <= upper and 6 <= width and 10 <= height:
+                    print ("({}, {}) -> ({}, {}), width = {}, height = {}, area = {}".format(ilow, jlow, ihigh, jhigh, width, height, area))
                     boxes.append(((ilow, jlow),(ihigh, jhigh)))
             j += 1
         i += 1
-    boxes = sorted(boxes)
+    boxes = sorted(boxes, key = functools.cmp_to_key( lambda x, y: x[0][1] - y[0][1] if abs((x[1][0] - x[0][0]) - (y[1][0] - y[0][0])) < 20 else x[0][0] - y[0][0] ))
     return boxes
+
+def get_character_from_cropped_image(crop):
+    crop = cv2.resize(crop, dsize=(28,28))
+    convert = np.array(crop,dtype=np.float32)/255
+    convert = convert.reshape(1, 1, 28, 28)
+    convert = torch.from_numpy(convert)
+    std_normalize = transforms.Normalize(mean=[0.456],
+                          std=[0.224])
+    final = std_normalize(convert)
+    cnn_model.eval()
+    with torch.no_grad():
+        pred = cnn_model(final)
+        #result = pred.argmax(1).item()
+        result = torch.max(pred,1)[1].item()
+        #print(pred)
+    return chars[result]
+
 
 def solve_image(pic):
     """From loaded cv2 image, solve for the license plate(s)
@@ -330,11 +385,13 @@ def solve_image(pic):
     Returns:
         List[(cv2image, str)]: List of tuple(plate image, plate number)
     """
+    print ("Enter solve_image function")
     Dmax = 608
     Dmin = 288
     ratio = float(max(pic.shape[:2])) / min(pic.shape[:2])
     side = int(ratio * Dmin)
     bound_dim = min(side, Dmax)
+    result = []
 
     _ , license_plates, lp_type = detect_lp(wpod_net, imnormalize(pic), bound_dim, lp_threshold=0.5)
     for _plate in license_plates: 
@@ -347,8 +404,19 @@ def solve_image(pic):
         #cv2.waitKey()
         boxes = get_bounding_boxes(binary)
         print(boxes)
+        plate_number = ""
+        for box in boxes:
+            #crop = binary[box[0][1]:box[1][1] + 1][box[0][0]:box[1][0] + 1]
+            crop = binary[box[0][0]:box[1][0] + 1, box[0][1]:box[1][1]]
+            plate_number += get_character_from_cropped_image(crop)
         
-    pass
+        #cv2.imshow("Plate: {}".format(plate_number), plate)
+        result.append((plate, plate_number))
+
+    for im, pl in result:
+        cv2.imshow("Plate: {}".format(pl), im)
+        cv2.waitKey()
+    return result
 
 
 #%%
@@ -360,9 +428,9 @@ def recognition(filepath):
 
     Returns: 
         Either: 
-        (_MEDIA_TYPE.IMAGE, (List[str, cv.Mat])) 
+        (_MEDIA_TYPE.IMAGE, (List[cv.Mat, str])) 
         or: 
-        (_MEDIA_TYPE.VIDEO, (List[str, cv.Mat, str, str]))
+        (_MEDIA_TYPE.VIDEO, (List[cv.Mat, str, str, str]))
     """ 
 
     file_path = filepath
@@ -371,7 +439,8 @@ def recognition(filepath):
     if extension in IMAGE_EXTENSIONS:
 
         pic = cv2.imread(file_path) 
-        solve_image(pic)
+        global recognition_result
+        recognition_result = (_MEDIA_TYPE.IMAGE, solve_image(pic))
 
         # Calculate ratio of weight/height and find the smallest
         

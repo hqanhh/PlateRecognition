@@ -39,7 +39,7 @@ def allowed_file(filename):
     return get_extension(filename) in ALLOWED_EXTENSIONS
 
 
-import pr_model as model 
+import pr_model 
 
 @app.route('/', methods=['GET', 'POST'])
 def upload_file():
@@ -63,7 +63,7 @@ def upload_file():
             print ("Filepath in main.py: %s" % filepath)
             file.save(filepath)
             url = (url_for('display_result', name=filename))
-            recognition_result = model.recognition(filepath)
+            recognition_result = pr_model.recognition(filepath)
             return redirect(url)
     return '''
     <!doctype html>
