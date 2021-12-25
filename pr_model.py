@@ -307,7 +307,7 @@ def get_bounding_boxes(img, value = 255):
                         nexti = fronti + dx
                         nextj = frontj + dy
                         if 0 <= nexti < size[0] and 0 <= nextj < size[1]:
-                            if not visited[nexti][nextj]:
+                            if not visited[nexti][nextj] and img[nexti][nextj] == value:
                                 visited[nexti][nextj] = True
                                 qi.append(nexti) 
                                 qj.append(nextj)
