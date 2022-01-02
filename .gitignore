@@ -12,3 +12,4 @@
 *.webm 
 env/*
 __pycache__/*
+*.ipynb
