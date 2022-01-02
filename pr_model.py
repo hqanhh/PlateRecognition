@@ -11,7 +11,7 @@ import glob
 import torch
 import torch.nn as nn
 import torchvision.transforms as transforms
-from app import ALLOWED_EXTENSIONS, IMAGE_EXTENSIONS, _MEDIA_TYPE
+from app import ALLOWED_EXTENSIONS, IMAGE_EXTENSIONS
 chars = ['0','1','A','B','C','D','E','F','G','H','K','L','2','M','N','P','R','S','T','U','V','X','Y','3','Z','4','5','6','7','8','9']
 
 #%%
@@ -261,7 +261,9 @@ def reconstruct(Im, Imresized, Yr, lp_threshold):
     final_labels = nms(labels, 0.1)
     final_labels_frontal = nms(labels_frontal, 0.1)
 
-    print(final_labels_frontal)
+    print("Final labels: ", final_labels_frontal)
+    if len(final_labels_frontal) == 0 or len(final_labels) != len (final_labels_frontal):
+        return [], [], None
 
     # LP size and type
     out_size, lp_type = (two_lines, 2) if ((final_labels_frontal[0].wh()[0] / final_labels_frontal[0].wh()[1]) < 1.7) else (one_line, 1)
@@ -269,7 +271,7 @@ def reconstruct(Im, Imresized, Yr, lp_threshold):
     license_plates = []
     if len(final_labels):
         final_labels.sort(key=lambda x: x.prob(), reverse=True)
-        for _, label in enumerate(final_labels):
+        for label in final_labels:
             t_ptsh = getRectPts(0, 0, out_size[0], out_size[1])
             ptsh = np.concatenate((label.pts * getWH(Im.shape).reshape((2, 1)), np.ones((1, 4))))
             H = find_T_matrix(ptsh, t_ptsh)
@@ -356,7 +358,12 @@ def get_bounding_boxes(img, value = 255, lower_bound = 1/80, upper_bound = 1/10)
                     boxes.append(((ilow, jlow),(ihigh, jhigh)))
             j += 1
         i += 1
-    boxes = sorted(boxes, key = functools.cmp_to_key( lambda x, y: x[0][1] - y[0][1] if abs((x[1][0] - x[0][0]) - (y[1][0] - y[0][0])) < 20 else x[0][0] - y[0][0] ))
+    def compare(h1, h2):
+        if abs(h1[0][0] - h2[0][0]) <= 8:
+            return h1[0][1] - h2[0][1]
+        else:
+            return h1[0][0] - h2[0][0]
+    boxes = sorted(boxes, key=functools.cmp_to_key(compare))
     return boxes
 
 def get_character_from_cropped_image(crop):
@@ -432,7 +439,7 @@ def recognition(filepath):
 
     file_path = filepath
     extension = get_extension(file_path)    
-
+    recognition_result = []
     if extension in IMAGE_EXTENSIONS:
 
         pic = cv2.imread(file_path) 
@@ -441,15 +448,53 @@ def recognition(filepath):
             cv2.imwrite(int_to_string_filename(i), x[0]) 
         recognition_result = [(int_to_string_filename(i), x[1], "", "") for (i, x) in enumerate(recognition_result)]
 
-    else:
-        count = 0
+    else: # if extension is a video extension
+        frame_count = 0
         cap = cv2.VideoCapture(filepath)
         fps = cap.get(cv2.CAP_PROP_FPS)
+        print ("FPS: {}".format(fps))
+
+        def generate_frame_filename(filename):
+            return 'f' + filename
+
+        plateid = 0
+        plate_time_of_occurences = {}
+        plate_number_to_framename = {}
         while True:
             is_read, frame = cap.read()
             if not is_read:
                 # break out of the loop if there are no frames to read
                 break
-            count += 1
+            frame_count += 1
             frame_result = solve_image(frame) 
+            for (i, (plate_frame, plate_number))  in enumerate(frame_result):
+
+                if plate_number not in plate_time_of_occurences:
+                    plate_time_of_occurences[plate_number] = [frame_count]
+                    plate_name = generate_frame_filename(int_to_string_filename(plateid))
+                    plateid += 1
+                    plate_number_to_framename[plate_number] = plate_name
+                    cv2.imwrite(plate_name, plate_frame)
+                else:
+                    plate_time_of_occurences[plate_number].append(frame_count)
+
+        print ("Plate occurrences: ", (plate_time_of_occurences))
+        print ("Plate to file: ", (plate_number_to_framename))
+        
+        for plate_number, timestamps in plate_time_of_occurences.items():
+            plate_name = plate_number_to_framename[plate_number]
+            begin, end = None, None
+            for timepoint in timestamps:
+                if end != None and timepoint == end + 1:
+                    end = timepoint
+                else:
+                    if begin != None: 
+                        recognition_result.append((plate_name, plate_number, "{}".format(begin), "{}".format(end)))
+                    begin = timepoint
+                    end = timepoint
+            if begin != None:
+                recognition_result.append((plate_name, plate_number, "{}".format(begin), "{}".format(end)))
+    print(recognition_result)
     return recognition_result
+
+# %%

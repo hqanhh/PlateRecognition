@@ -3,26 +3,24 @@ from flask import Flask, flash, request, redirect, url_for, render_template
 from werkzeug.utils import secure_filename
 from enum import Enum, unique
 UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
+FUPLOAD_FOLDER = os.path.join(os.getcwd(), 'fuploads')
 ALLOWED_EXTENSIONS = {'jpg', 'png', 'mp4'}
 IMAGE_EXTENSIONS = {'jpg', 'png'}
 filepath = ""
 recognition_result = None 
-class _MEDIA_TYPE(Enum): 
-    NONE = 0
-    IMAGE = 1
-    VIDEO = 2
 
 def get_media_type(file_extension):
     if file_extension in IMAGE_EXTENSIONS:
-        return _MEDIA_TYPE.IMAGE
+        return 1
     elif file_extension in ALLOWED_EXTENSIONS:
-        return _MEDIA_TYPE.VIDEO
-    return _MEDIA_TYPE.NONE
+        return 2
+    return 0
 
-uploaded_mediatype = _MEDIA_TYPE.NONE
+uploaded_mediatype = 0
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['FUPLOAD_FOLDER'] = FUPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 64 * 1024 * 1024
 
 def get_extension(filename): 
@@ -58,6 +56,8 @@ def upload_file():
             filename = secure_filename(file.filename)
             filename = "media." + get_extension(filename)
             print ("Filename in main.py: %s" % filename)
+            global uploaded_mediatype
+            uploaded_mediatype = get_media_type(get_extension(filename))
             global filepath 
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             print ("Filepath in main.py: %s" % filepath)
@@ -94,3 +94,10 @@ app.add_url_rule(
     "/result/<name>", endpoint="display_result", build_only=True
 )
 
+@app.route('/fuploads/<name>')
+def show_fuploads(name):
+    return send_from_directory(app.config["FUPLOAD_FOLDER"], name)
+
+app.add_url_rule(
+    "/fuploads/<name>", endpoint="show_fuploads", build_only=True
+)

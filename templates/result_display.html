@@ -26,35 +26,36 @@
   
 <body>
 
+{% if uploaded_mediatype == 1 %}
 <img src = "../uploads/{{name}}" alt = "Original image">
-  
+{% elif uploaded_mediatype == 2 %}
+<video width="768" >
+    <source src = "../uploads/{{name}}" type="video/mp4">
+</video>
+{%endif %}
+
 <table style="margin-left: 20px;">
 <!-- Table headers -->
     <th>
         <tr style="color: rgb(212, 0, 255); ">    
-        <td>Plate Image</td>
-        <td>Plate Number</td> 
-        <td>Start time</td>
-        <td>End time</td>
-</tr>
+            <td>Plate Image</td>
+            <td>Plate Number</td> 
+            <td>Start time</td>
+            <td>End time</td>
+        </tr>
     </th>
-      
-<!-- For loop logic of jinja template -->
+
 {%for result in results%}
-  
-<!-- table rows -->
 <tr>
+<!-- table rows -->
     <td><img src = "../{{result[0]}}" alt = "Plate image"></td>
     <td>{{result[1]}}</td> 
     <td>{{result[2]}}</td> 
     <td>{{result[3]}}</td> 
-
+</tr>
 {%endfor%}
   
-</tr>
-  
 </table>
-  
   
 </body>
 </html>
