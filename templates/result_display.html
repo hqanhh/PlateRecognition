@@ -30,9 +30,21 @@
 <img src = "../uploads/{{name}}" alt = "Original image">
 {% elif uploaded_mediatype == 2 %}
 <video width="768" >
-    <source src = "../uploads/{{name}}" type="video/mp4">
+    <source src = "../uploads/media.mp4" type="video/mp4">
 </video>
+
+<h3>Plate with highest certainty </h3>
+
+<img src = "../{{best_plate_path}}" alt = "Plate with highest certainty"> 
+<br>
+Plate number: {{best_plate_number}} 
+<br>
+Certainty = {{best_plate_certainty}}
+<br>
+
 {%endif %}
+
+<h3>All recognized plates</h3>
 
 <table style="margin-left: 20px;">
 <!-- Table headers -->
@@ -50,8 +62,8 @@
 <!-- table rows -->
     <td><img src = "../{{result[0]}}" alt = "Plate image"></td>
     <td>{{result[1]}}</td> 
-    <td>{{result[2]}}</td> 
-    <td>{{result[3]}}</td> 
+    <td>{{result[2] / fps}}</td> 
+    <td>{{result[3] / fps}}</td> 
 </tr>
 {%endfor%}
   

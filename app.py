@@ -8,6 +8,8 @@ ALLOWED_EXTENSIONS = {'jpg', 'png', 'mp4'}
 IMAGE_EXTENSIONS = {'jpg', 'png'}
 filepath = ""
 recognition_result = None 
+fps = 0
+most_likely_plate_path, most_likely_plate_number, most_likely_plate_certainty = "Not found", "Not found", ""
 
 def get_media_type(file_extension):
     if file_extension in IMAGE_EXTENSIONS:
@@ -88,7 +90,7 @@ app.add_url_rule(
 
 @app.route('/result/<name>')
 def display_result(name):
-    return render_template("result_display.html", results=recognition_result, name=name)
+    return render_template("result_display.html", results=recognition_result, fps=fps, name=name, uploaded_mediatype=uploaded_mediatype, best_plate_number=most_likely_plate_number, best_plate_path=most_likely_plate_path, best_plate_certainty=most_likely_plate_certainty)
 
 app.add_url_rule(
     "/result/<name>", endpoint="display_result", build_only=True

@@ -11,6 +11,7 @@ import glob
 import torch
 import torch.nn as nn
 import torchvision.transforms as transforms
+import app
 from app import ALLOWED_EXTENSIONS, IMAGE_EXTENSIONS
 chars = ['0','1','A','B','C','D','E','F','G','H','K','L','2','M','N','P','R','S','T','U','V','X','Y','3','Z','4','5','6','7','8','9']
 
@@ -451,8 +452,7 @@ def recognition(filepath):
     else: # if extension is a video extension
         frame_count = 0
         cap = cv2.VideoCapture(filepath)
-        fps = cap.get(cv2.CAP_PROP_FPS)
-        print ("FPS: {}".format(fps))
+        app.fps = cap.get(cv2.CAP_PROP_FPS)
 
         def generate_frame_filename(filename):
             return 'f' + filename
@@ -481,19 +481,30 @@ def recognition(filepath):
         print ("Plate occurrences: ", (plate_time_of_occurences))
         print ("Plate to file: ", (plate_number_to_framename))
         
+        most_likely_frame_count = 0
         for plate_number, timestamps in plate_time_of_occurences.items():
+            if len(plate_number) < 7 or len(plate_number) > 9: continue
+
             plate_name = plate_number_to_framename[plate_number]
+            this_plate_frame_count = len(timestamps) 
+
+            if this_plate_frame_count > most_likely_frame_count:
+                most_likely_frame_count = this_plate_frame_count
+                app.most_likely_plate_number = plate_number 
+                app.most_likely_plate_certainty = most_likely_frame_count / (timestamps[-1] - timestamps[0] + 1)
+                app.most_likely_plate_path = plate_name
+
             begin, end = None, None
             for timepoint in timestamps:
                 if end != None and timepoint == end + 1:
                     end = timepoint
                 else:
                     if begin != None: 
-                        recognition_result.append((plate_name, plate_number, "{}".format(begin), "{}".format(end)))
+                        recognition_result.append((plate_name, plate_number, begin, end))
                     begin = timepoint
                     end = timepoint
             if begin != None:
-                recognition_result.append((plate_name, plate_number, "{}".format(begin), "{}".format(end)))
+                recognition_result.append((plate_name, plate_number, (begin), (end)))
     print(recognition_result)
     return recognition_result
 
