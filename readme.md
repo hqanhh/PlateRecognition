@@ -6,4 +6,12 @@ Bachelor of Computer Science, College of Engineering and Computer Science, VinUn
 
 ## Client-side demo
 
-Go to 
+Go to https://edbf48fd61e8e2.lhr.life
+
+## Server-side installation 
+
+1. Clone the repository
+2. Open your favorite terminal
+3. `pip install -r requirements.txt`
+
+Run the server with the following command: `python3 ./app.py`
