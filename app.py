@@ -8,7 +8,7 @@ ALLOWED_EXTENSIONS = {'jpg', 'png', 'mp4'}
 IMAGE_EXTENSIONS = {'jpg', 'png'}
 filepath = ""
 recognition_result = None 
-fps = 0
+fps = 1
 most_likely_plate_path, most_likely_plate_number, most_likely_plate_certainty = "Not found", "Not found", ""
 
 def get_media_type(file_extension):
@@ -24,7 +24,7 @@ app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['FUPLOAD_FOLDER'] = FUPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 64 * 1024 * 1024
-app.config['SECRET_KEY'] = "xuhdgfcv9d38bf0q"
+app.config['SECRET_KEY'] = "15d29e30569925540ad77777fc5f139fc9f3bceaaf5253a6588a6fa7ce4545ce"
 
 def get_extension(filename): 
     if '.' in filename:

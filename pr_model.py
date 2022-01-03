@@ -447,7 +447,7 @@ def recognition(filepath):
         recognition_result = solve_image(pic)
         for i, x in enumerate(recognition_result):
             cv2.imwrite(int_to_string_filename(i), x[0]) 
-        recognition_result = [(int_to_string_filename(i), x[1], "", "") for (i, x) in enumerate(recognition_result)]
+        recognition_result = [(int_to_string_filename(i), x[1], 0, 0) for (i, x) in enumerate(recognition_result)]
 
     else: # if extension is a video extension
         frame_count = 0
