@@ -24,6 +24,7 @@ app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['FUPLOAD_FOLDER'] = FUPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 64 * 1024 * 1024
+app.config['SECRET_KEY'] = "xuhdgfcv9d38bf0q"
 
 def get_extension(filename): 
     if '.' in filename:
