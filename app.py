@@ -104,5 +104,3 @@ def show_fuploads(name):
 app.add_url_rule(
     "/fuploads/<name>", endpoint="show_fuploads", build_only=True
 )
-
-app.run(debug=False)
