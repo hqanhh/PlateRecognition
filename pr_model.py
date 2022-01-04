@@ -64,56 +64,40 @@ class Label:
         self.__br = br
         self.__cl = cl
         self.__prob = prob
-
     def __str__(self):
         return 'Class: %d, top left(x: %f, y: %f), bottom right(x: %f, y: %f)' % (
         self.__cl, self.__tl[0], self.__tl[1], self.__br[0], self.__br[1])
-
     # Make a copy
     def copy(self):
         return Label(self.__cl, self.__tl, self.__br)
-
     # Find width and height
     def wh(self): return self.__br - self.__tl
-
     # Find center point
     def cc(self): return self.__tl + self.wh() / 2
-
     # Get coordinate of top left
     def tl(self): return self.__tl
-
     # Get coordinate of bottom right
     def br(self): return self.__br
-
     # Get coordinate of top right
     def tr(self): return np.array([self.__br[0], self.__tl[1]])
-
     # Get coordinate of bottom left
     def bl(self): return np.array([self.__tl[0], self.__br[1]])
-    
     # Return class
     def cl(self): return self.__cl
-
     # Calculate area 
     def area(self): return np.prod(self.wh())
-
     # Return probability
     def prob(self): return self.__prob
-
     def set_class(self, cl):
         self.__cl = cl
-
     def set_tl(self, tl):
         self.__tl = tl
-
     def set_br(self, br):
         self.__br = br
-
     def set_wh(self, wh):
         cc = self.cc()
         self.__tl = cc - .5 * wh
         self.__br = cc + .5 * wh
-
     def set_prob(self, prob):
         self.__prob = prob
 
@@ -129,13 +113,11 @@ def getWH(image):
 #Find intersection over union area
 def IOU(tl1, br1, tl2, br2):
     """Find intersection over union area
-
     Args:
         tl1 (tuple(int, int)): Top-left coordinates of the first rectangle
         br1 (tuple(int, int)): Bottom-right coordinates of the first rectangle
         tl2 (tuple(int, int)): Top-left coordinates of the second rectangle
         br2 (tuple(int, int)): Bottom-right coordinates of the second rectangle
-
     Returns:
         float: Area of intersection
     """
@@ -215,20 +197,16 @@ def reconstruct(Im, Imresized, Yr, lp_threshold):
     # 4 max-pooling layers, stride = 2
     stride = 2**4
     side = ((208 + 40)/2)/stride
-
     # one line and two lines license plate size
     one_line = (470, 110)
     two_lines = (280, 200)
-
     Probs = Yr[..., 0]
     Affines = Yr[..., 2:]
-
     xx, yy = np.where(Probs > lp_threshold)
     # CNN input image size 
     WH = getWH(Imresized.shape)
     # Output feature map size
     MN = WH/stride
-
     vxx = vyy = 0.5 #alpha
     filt = lambda vx, vy: np.matrix([[-vx, -vy, 1], [vx, -vy, 1], [vx, vy, 1], [-vx, vy, 1]]).T
     labels = []
@@ -240,7 +218,6 @@ def reconstruct(Im, Imresized, Yr, lp_threshold):
         prob = Probs[x, y]
 
         mn = np.array([float(y) + 0.5, float(x) + 0.5])
-
         # Affine transformation matrix
         A = np.reshape(affine, (2, 3))
         A[0, 0] = max(A[0, 0], 0)
@@ -284,33 +261,23 @@ def reconstruct(Im, Imresized, Yr, lp_threshold):
 
 # %%
 def detect_lp(model, Im, max_dim, lp_threshold):
-
     # Calculate factor to resize  the image
     min_dim_img = min(Im.shape[:2])
     factor = float(max_dim) / min_dim_img
-
     # Calculate new weight and height
     w, h = (np.array(Im.shape[1::-1], dtype=float) * factor).astype(int).tolist()
-
     # Resize image
     Imresized = cv2.resize(Im, (w, h))
-
     T = Imresized.copy()
-
     # Convert to Tensor
     T = T.reshape((1, T.shape[0], T.shape[1], T.shape[2]))
-
     # Use Wpod-net pretrain to detect license plate
     pred = model.predict(T)
-
     # Remove axes of length one from pred
     pred = np.squeeze(pred)
-
     print(pred.shape)
-
     # Reconstruct and return license plate (1: long, 2: square)
     L, TLp, lp_type = reconstruct(Im, Imresized, pred, lp_threshold)
-
     return L, TLp, lp_type
 
 wpod_net_path = "wpod-net_update1.json" 
@@ -319,55 +286,94 @@ wpod_net = load_model(wpod_net_path)
 def get_bounding_boxes(img, value = 255, lower_bound = 1/80, upper_bound = 1/10):
     size = img.shape 
     visited = np.zeros(size, dtype=np.bool_) 
-    i = 0 
+
     boxes = []
+
+    #Calculate the upper and lower bound of the allowed area in terms of pixels
     lower = int(size[0] * size[1] * lower_bound) 
     upper = int(size[0] * size[1] * upper_bound)
+    
     print (" low = {}, up = {}, total = {}".format(lower, upper, size[0] * size[1]))
+
+    #Iterate over all cell (i, j) to do non-recursive DFS
+
+    i = 0
     while i < size[0]: 
         j = 0
         while j < size[1]:
-            # print (i, j, img[i, j])
+
+            #Check if cell is not visited
             if img[i][j] == value and not visited[i][j]: 
+
+                #Initialize the 2 stacks
                 qi = [i] 
                 qj = [j]
                 visited[i][j] = True
+
+                #Keep track of bounding boxes
                 ihigh = i
                 ilow = i
                 jhigh = j
                 jlow = j
+
                 while len(qi) > 0: 
+
+                    #Pop cell out of stack
                     fronti = qi.pop()
                     frontj = qj.pop()
+
+                    #Maximize / minimize boundaries
                     ihigh = max(ihigh, fronti)
                     ilow = min(ilow, fronti)
                     jhigh = max(jhigh, frontj)
                     jlow = min(jlow, frontj)
+
+                    #Iterate over all of the neighboring cells
                     for dx, dy in [(-1, 0), (1, 0), (0, 1), (0, -1)]: 
+
                         nexti = fronti + dx
                         nextj = frontj + dy
+                        
                         if 0 <= nexti < size[0] and 0 <= nextj < size[1]:
+
+                            #if cell is valid and not visited
                             if not visited[nexti][nextj] and img[nexti][nextj] == value:
                                 visited[nexti][nextj] = True
                                 qi.append(nexti) 
                                 qj.append(nextj)
+
                 width = jhigh - jlow + 1
                 height = ihigh - ilow + 1
                 area = width * height
+
                 if lower <= area <= upper and 6 <= width and 10 <= height:
                     print ("({}, {}) -> ({}, {}), width = {}, height = {}, area = {}".format(ilow, jlow, ihigh, jhigh, width, height, area))
                     boxes.append(((ilow, jlow),(ihigh, jhigh)))
+
             j += 1
+
         i += 1
+
     def compare(h1, h2):
         if abs(h1[0][0] - h2[0][0]) <= 8:
             return h1[0][1] - h2[0][1]
         else:
             return h1[0][0] - h2[0][0]
+
+    #sort boxes by position - from top left to top right then bottom left to bottom right
     boxes = sorted(boxes, key=functools.cmp_to_key(compare))
     return boxes
 
 def get_character_from_cropped_image(crop):
+    """Generate the charater from the cropped image
+
+    Args:
+        crop (cv2 image): cropped, normalized image 
+
+    Returns:
+        [char]: The charater from the cropped image
+    """
+
     crop = cv2.resize(crop, dsize=(28,28))
     convert = np.array(crop,dtype=np.float32)/255
     convert = convert.reshape(1, 1, 28, 28)
@@ -402,6 +408,7 @@ def solve_image(pic):
     result = []
 
     _ , license_plates, lp_type = detect_lp(wpod_net, imnormalize(pic), bound_dim, lp_threshold=0.5)
+
     for _plate in license_plates: 
         plate = cv2.convertScaleAbs(_plate, alpha = 255.0)
         #cv2.imshow("Plate", plate)
@@ -438,9 +445,11 @@ def recognition(filepath):
         (List[(str, str, str, str)])): image path, plate number, start time, end time
     """ 
 
+    # Declaration of parameters that are passed to the Flask frontend
     file_path = filepath
     extension = get_extension(file_path)    
     recognition_result = []
+
     if extension in IMAGE_EXTENSIONS:
 
         pic = cv2.imread(file_path) 
@@ -450,6 +459,7 @@ def recognition(filepath):
         recognition_result = [(int_to_string_filename(i), x[1], 0, 0) for (i, x) in enumerate(recognition_result)]
 
     else: # if extension is a video extension
+
         frame_count = 0
         cap = cv2.VideoCapture(filepath)
         app.fps = cap.get(cv2.CAP_PROP_FPS)
@@ -467,14 +477,16 @@ def recognition(filepath):
                 break
             frame_count += 1
             frame_result = solve_image(frame) 
-            for (i, (plate_frame, plate_number))  in enumerate(frame_result):
 
+            for (i, (plate_frame, plate_number))  in enumerate(frame_result):
+                # If a plate is never recognized before, temporarily save the frame as a new image
                 if plate_number not in plate_time_of_occurences:
                     plate_time_of_occurences[plate_number] = [frame_count]
                     plate_name = generate_frame_filename(int_to_string_filename(plateid))
                     plateid += 1
                     plate_number_to_framename[plate_number] = plate_name
                     cv2.imwrite(plate_name, plate_frame)
+
                 else:
                     plate_time_of_occurences[plate_number].append(frame_count)
 
@@ -483,17 +495,21 @@ def recognition(filepath):
         
         most_likely_frame_count = 0
         for plate_number, timestamps in plate_time_of_occurences.items():
+
+            # Filter plates that are falsely recognized - not a correct amount of characters
             if len(plate_number) < 7 or len(plate_number) > 9: continue
 
             plate_name = plate_number_to_framename[plate_number]
             this_plate_frame_count = len(timestamps) 
 
+            # Save most likely license information
             if this_plate_frame_count > most_likely_frame_count:
                 most_likely_frame_count = this_plate_frame_count
                 app.most_likely_plate_number = plate_number 
                 app.most_likely_plate_certainty = most_likely_frame_count / (timestamps[-1] - timestamps[0] + 1)
                 app.most_likely_plate_path = plate_name
 
+            # Merge consecutive timestamps into a single time window
             begin, end = None, None
             for timepoint in timestamps:
                 if end != None and timepoint == end + 1:
@@ -505,7 +521,6 @@ def recognition(filepath):
                     end = timepoint
             if begin != None:
                 recognition_result.append((plate_name, plate_number, (begin), (end)))
+
     print(recognition_result)
     return recognition_result
-
-# %%
