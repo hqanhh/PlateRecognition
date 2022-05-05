@@ -13,3 +13,4 @@
 env/*
 __pycache__/*
 *.ipynb
+venv/*
